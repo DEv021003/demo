@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        form {
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        form input[type="text"],
+        form input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        form button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        form button:hover {
+            background-color: #45a049;
+        }
+
+        form button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        form button:not(:last-child) {
+            margin-right: 10px;
+        }
+
+        .edit-form {
+            display: none;
+        }
+
+        .edit-form.active {
+            display: block;
+        }
+
+        .edit-form input[type="text"],
+        .edit-form input[type="number"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 14px;
+        }
+
+        .edit-form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+
+        .edit-form button:hover {
+            background-color: #0056b3;
+        }
+
+        .edit-form button:not(:last-child) {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Employee Management</h1>
+<form id="addEmployeeForm">
+    <h2>Add Employee</h2>
+    <input type="text" id="name" placeholder="Name" required>
+    <input type="number" id="wage" placeholder="Wage" required>
+    <button type="submit">Add</button>
+</form>
+<h2>Employee List</h2>
+<table id="employeeTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Wage</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody id="employeeTableBody">
+    </tbody>
+</table>
+<form id="editEmployeeForm" class="edit-form">
+    <h2>Edit Employee</h2>
+    <input type="hidden" id="editId">
+    <input type="text" id="editName" placeholder="Name" required>
+    <input type="number" id="editWage" placeholder="Wage" required>
+    <button type="submit">Update</button>
+    <button type="button" onclick="cancelEdit()">Cancel</button>
+</form>
+
+<!-- JavaScript -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        getEmployees();
+    });
+    function getEmployees() {
+        fetch('/api/employees')
+            .then(response => response.json())
+            .then(data => {
+                const employeeTableBody = document.getElementById('employeeTableBody');
+                employeeTableBody.innerHTML = '';
+
+                data.forEach(employee => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                            <td>${employee.id}</td>
+                            <td>${employee.name}</td>
+                            <td>${employee.wage}</td>
+                            <td>
+                                <button onclick="editEmployee(${employee.id}, '${employee.name}', ${employee.wage})">Edit</button>
+                                <button onclick="deleteEmployee(${employee.id})">Delete</button>
+                            </td>
+                        `;
+                    employeeTableBody.appendChild(tr);
+                });
+            })
+            .catch(error => console.error('Error fetching employees:', error));
+    }
+    document.getElementById('addEmployeeForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const wage = document.getElementById('wage').value;
+
+        fetch('/api/employees', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name, wage })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to add employee');
+                }
+                getEmployees();
+                document.getElementById('addEmployeeForm').reset();
+            })
+            .catch(error => console.error('Error adding employee:', error));
+    });
+    function deleteEmployee(id) {
+        if (confirm('Are you sure you want to delete this employee?')) {
+            fetch(`/api/employees/${id}`, {
+                method: 'DELETE',
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to delete employee');
+                    }
+                    getEmployees();
+                })
+                .catch(error => console.error('Error deleting employee:', error));
+        }
+    }
+    function editEmployee(id, name, wage) {
+        document.getElementById('editId').value = id;
+        document.getElementById('editName').value = name;
+        document.getElementById('editWage').value = wage;
+
+        document.getElementById('editEmployeeForm').classList.add('active');
+    }
+    function cancelEdit() {
+        document.getElementById('editEmployeeForm').classList.remove('active');
+    }
+    document.getElementById('editEmployeeForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('editId').value;
+        const name = document.getElementById('editName').value;
+        const wage = document.getElementById('editWage').value;
+
+        fetch(`/api/employees/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id, name, wage })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update employee');
+                }
+                getEmployees();
+                cancelEdit();
+            })
+            .catch(error => console.error('Error updating employee:', error));
+    });
+</script>
+</body>
+</html>
